@@ -212,10 +212,9 @@ vprintfmt(void (*putch)(int, void *), void *put_arg, const char *fmt, va_list ap
 
         case 'o': /* (unsigned) octal */
             // LAB 1: Your code here:
-            putch('X', put_arg);
-            putch('X', put_arg);
-            putch('X', put_arg);
-            break;
+            base = 8;
+            num = get_unsigned(&aq, lflag, zflag);
+            goto number;
 
         case 'p': /* pointer */
             putch('0', put_arg);
