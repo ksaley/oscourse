@@ -96,6 +96,31 @@ find_function(const char *const fname) {
      * in assembly. */
 
     // LAB 3: Your code here:
+    static const struct {
+        const char *name;
+        void (*func)(void);
+    } sys_functions[] = {
+        { "sys_exit", sys_exit },
+        { "sys_yield", sys_yield },
+    };
+    
+    for (unsigned i = 0; i < sizeof(sys_functions) / sizeof(sys_functions[0]); i++) {
+        if (strcmp(fname, sys_functions[i].name) == 0) {
+            return (uintptr_t)sys_functions[i].func;
+        }
+    }
+    
 
+    struct Dwarf_Addrs addrs;
+    load_kernel_dwarf_info(&addrs);
+    uintptr_t offset = 0;
+    
+    if (address_by_fname(&addrs, fname, &offset) == 0) {
+        return offset;
+    }
+    if (naive_address_by_fname(&addrs, fname, &offset) == 0) {
+        return offset;
+    }
+    
     return 0;
 }
