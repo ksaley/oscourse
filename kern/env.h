@@ -26,6 +26,16 @@ _Noreturn void env_pop_tf(struct Trapframe *tf);
 #ifdef CONFIG_KSPACE
 extern void sys_exit(void);
 extern void sys_yield(void);
+extern void sys_sched_setparam(void);
+extern void sys_sleep(void);
+extern void sys_mutex_init(void);
+extern void sys_mutex_lock(void);
+extern void sys_mutex_unlock(void);
+extern void sys_mutex_trylock(void);
+extern void sys_condvar_init(void);
+extern void sys_condvar_wait(void);
+extern void sys_condvar_signal(void);
+extern void sys_condvar_broadcast(void);
 #endif
 
 /* Without this extra macro, we couldn't pass macros like TEST to

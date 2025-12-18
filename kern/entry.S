@@ -81,6 +81,86 @@ sys_exit:
     call csys_exit
     jmp .
 
+.globl sys_sched_setparam
+.type  sys_sched_setparam, @function
+sys_sched_setparam:
+	cli
+    call save_trapframe_syscall
+    call csys_sched_setparam
+    jmp .
+
+.globl sys_sleep
+.type  sys_sleep, @function
+sys_sleep:
+	cli
+    call save_trapframe_syscall
+    call csys_sleep
+    jmp .
+
+.globl sys_mutex_init
+.type  sys_mutex_init, @function
+sys_mutex_init:
+	cli
+    call save_trapframe_syscall
+    call csys_mutex_init
+    jmp .
+
+.globl sys_mutex_lock
+.type  sys_mutex_lock, @function
+sys_mutex_lock:
+	cli
+    call save_trapframe_syscall
+    call csys_mutex_lock
+    jmp .
+
+.globl sys_mutex_unlock
+.type  sys_mutex_unlock, @function
+sys_mutex_unlock:
+	cli
+    call save_trapframe_syscall
+    call csys_mutex_unlock
+    jmp .
+
+.globl sys_mutex_trylock
+.type  sys_mutex_trylock, @function
+sys_mutex_trylock:
+	cli
+    call save_trapframe_syscall
+    call csys_mutex_trylock
+    jmp .
+
+.globl sys_condvar_init
+.type  sys_condvar_init, @function
+sys_condvar_init:
+	cli
+    call save_trapframe_syscall
+    call csys_condvar_init
+    jmp .
+
+.globl sys_condvar_wait
+.type  sys_condvar_wait, @function
+sys_condvar_wait:
+	cli
+    call save_trapframe_syscall
+    call csys_condvar_wait
+    jmp .
+
+.globl sys_condvar_signal
+.type  sys_condvar_signal, @function
+sys_condvar_signal:
+	cli
+    call save_trapframe_syscall
+    call csys_condvar_signal
+    jmp .
+
+.globl sys_condvar_broadcast
+.type  sys_condvar_broadcast, @function
+sys_condvar_broadcast:
+	cli
+    call save_trapframe_syscall
+    call csys_condvar_broadcast
+    jmp .
+
 #endif
 
 

@@ -1,0 +1,81 @@
+КАК ЗАПУСТИТЬ ТЕСТЫ
+==================
+
+1. ДОБАВИТЬ ТЕСТЫ В INIT.C
+---------------------------
+
+Отредактируйте файл kern/init.c и добавьте создание тестовых процессов:
+
+#ifdef CONFIG_KSPACE
+    /* Touch all you want */
+    ENV_CREATE_KERNEL_TYPE(prog_test1);
+    ENV_CREATE_KERNEL_TYPE(prog_test2);
+    ENV_CREATE_KERNEL_TYPE(prog_test3);
+    ENV_CREATE_KERNEL_TYPE(prog_test4);
+    ENV_CREATE_KERNEL_TYPE(prog_test5);
+    ENV_CREATE_KERNEL_TYPE(prog_test6);
+    /* EEVDF scheduler tests */
+    ENV_CREATE_KERNEL_TYPE(prog_test_sched);
+    ENV_CREATE_KERNEL_TYPE(prog_test_sleep);
+    ENV_CREATE_KERNEL_TYPE(prog_test_mutex);
+    ENV_CREATE_KERNEL_TYPE(prog_test_condvar);
+#endif
+
+2. СОБРАТЬ ПРОЕКТ
+-----------------
+
+cd /Users/ksaley/Desktop/oscourse/oscourse
+make
+
+Или если используете LLVM:
+export JOSLLVM=1
+make
+
+3. ЗАПУСТИТЬ QEMU
+-----------------
+
+Без графики (рекомендуется):
+make qemu-nox
+
+С графикой:
+make qemu
+
+С отладчиком:
+make qemu-nox-gdb
+
+4. ЗАПУСТИТЬ КОНКРЕТНЫЙ ТЕСТ
+-----------------------------
+
+Для запуска конкретного теста используйте:
+make run-test_sched-nox
+make run-test_sleep-nox
+make run-test_mutex-nox
+make run-test_condvar-nox
+
+5. ПРОВЕРКА РЕЗУЛЬТАТОВ
+-----------------------
+
+После запуска QEMU вы увидите вывод тестов в консоли.
+Тесты должны:
+- test_sched: демонстрировать честность планирования
+- test_sleep: проверять работу sys_sleep
+- test_mutex: проверять синхронизацию через мьютексы
+- test_condvar: проверять работу условных переменных
+
+6. ОТЛАДКА
+----------
+
+Если что-то не работает:
+- Проверьте, что все системные вызовы правильно зарегистрированы
+- Убедитесь, что тесты добавлены в init.c
+- Проверьте логи QEMU (qemu.log)
+- Используйте gdb для отладки: make qemu-nox-gdb
+
+7. ПРИМЕЧАНИЯ
+-------------
+
+- Убедитесь, что QEMU установлен и доступен в PATH
+- Для сборки нужен либо LLVM toolchain (JOSLLVM=1), либо GCC cross-compiler
+- Тесты запускаются автоматически при загрузке системы
+- Можно запускать несколько тестов одновременно для проверки планировщика
+

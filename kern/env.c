@@ -14,6 +14,8 @@
 #include <kern/kdebug.h>
 #include <kern/macro.h>
 #include <kern/traceopt.h>
+#include <kern/timer.h>
+#include <kern/tsc.h>
 
 /* Currently active environment */
 struct Env *curenv = NULL;
@@ -131,6 +133,15 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
 #endif
     env->env_status = ENV_RUNNABLE;
     env->env_runs = 0;
+
+    /* Initialize EEVDF scheduling parameters */
+    env->env_weight = 1024;  /* Default weight */
+    env->env_vruntime = 0;
+    env->env_vdeadline = 0;
+    env->env_slice_start = 0;
+    env->env_sleep_until = 0;
+    env->env_sched_link = NULL;
+    env->env_wait_link = NULL;
 
     /* Clear out all the saved register state,
      * to prevent the register values
@@ -344,6 +355,10 @@ env_create(uint8_t *binary, size_t size, enum EnvType type) {
         panic("Can't allocate new environment\n");
     }
     load_icode(new, binary, size);
+    /* Enqueue the new environment in the scheduler */
+    if (new->env_status == ENV_RUNNABLE) {
+        sched_eevdf_enqueue(new);
+    }
 }
 
 
@@ -389,6 +404,63 @@ csys_exit(void) {
 void
 csys_yield(struct Trapframe *tf) {
     memcpy(&curenv->env_tf, tf, sizeof(struct Trapframe));
+    sched_yield();
+}
+
+/* System call: Set scheduling parameters (weight) */
+void
+csys_sched_setparam(struct Trapframe *tf) {
+    if (!curenv) panic("curenv = NULL");
+    
+    uint64_t weight = tf->tf_regs.reg_rdi; /* First argument in rdi */
+    
+    if (weight == 0 || weight > 1000000) {
+        /* Invalid weight, keep default */
+        curenv->env_tf.tf_regs.reg_rax = -E_INVAL;
+        return;
+    }
+    
+    /* Update weight and re-enqueue */
+    if (curenv->env_status == ENV_RUNNABLE || curenv->env_status == ENV_RUNNING) {
+        sched_eevdf_dequeue(curenv);
+    }
+    
+    curenv->env_weight = weight;
+    
+    if (curenv->env_status == ENV_RUNNABLE || curenv->env_status == ENV_RUNNING) {
+        sched_eevdf_enqueue(curenv);
+    }
+    
+    curenv->env_tf.tf_regs.reg_rax = 0; /* Success */
+}
+
+/* System call: Sleep for specified microseconds */
+void
+csys_sleep(struct Trapframe *tf) {
+    if (!curenv) panic("curenv = NULL");
+    
+    uint64_t usec = tf->tf_regs.reg_rdi; /* First argument in rdi */
+    
+    if (usec == 0) {
+        curenv->env_tf.tf_regs.reg_rax = 0;
+        return;
+    }
+    
+    /* Calculate wake-up time */
+    uint64_t cpu_freq = timer_for_schedule ? timer_for_schedule->get_cpu_freq() : 2500000000ULL;
+    uint64_t tsc_delta = (usec * cpu_freq) / 1000000ULL;
+    uint64_t now = read_tsc();
+    
+    /* Remove from runnable queue */
+    if (curenv->env_status == ENV_RUNNABLE || curenv->env_status == ENV_RUNNING) {
+        sched_eevdf_dequeue(curenv);
+    }
+    
+    /* Set sleep time and status */
+    curenv->env_sleep_until = now + tsc_delta;
+    curenv->env_status = ENV_NOT_RUNNABLE;
+    
+    /* Yield to scheduler */
     sched_yield();
 }
 #endif

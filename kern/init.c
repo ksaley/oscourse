@@ -152,6 +152,9 @@ i386_init(void) {
     /* User environment initialization functions */
     env_init();
 
+    /* Initialize EEVDF scheduler */
+    sched_eevdf_init();
+
     /* Choose the timer used for scheduling: hpet or pit */
     timers_schedule("hpet0");
 
@@ -163,6 +166,11 @@ i386_init(void) {
     ENV_CREATE_KERNEL_TYPE(prog_test4);
     ENV_CREATE_KERNEL_TYPE(prog_test5);
     ENV_CREATE_KERNEL_TYPE(prog_test6);
+    /* EEVDF scheduler tests */
+    ENV_CREATE_KERNEL_TYPE(prog_test_sched);
+    ENV_CREATE_KERNEL_TYPE(prog_test_sleep);
+    ENV_CREATE_KERNEL_TYPE(prog_test_mutex);
+    ENV_CREATE_KERNEL_TYPE(prog_test_condvar);
 #else
 
 #if LAB >= 10
