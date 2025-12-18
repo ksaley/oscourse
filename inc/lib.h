@@ -39,6 +39,16 @@ extern const volatile struct Env envs[NENV];
 #ifdef JOS_PROG
 extern void (*volatile sys_exit)(void);
 extern void (*volatile sys_yield)(void);
+extern void (*volatile sys_sched_setparam)(uint64_t weight);
+extern void (*volatile sys_sleep)(uint64_t usec);
+extern void (*volatile sys_mutex_init)(void *m);
+extern void (*volatile sys_mutex_lock)(void *m);
+extern void (*volatile sys_mutex_unlock)(void *m);
+extern int (*volatile sys_mutex_trylock)(void *m);
+extern void (*volatile sys_condvar_init)(void *cv, void *m);
+extern void (*volatile sys_condvar_wait)(void *cv);
+extern void (*volatile sys_condvar_signal)(void *cv);
+extern void (*volatile sys_condvar_broadcast)(void *cv);
 #endif
 
 #ifndef debug

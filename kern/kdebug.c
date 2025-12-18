@@ -102,6 +102,16 @@ find_function(const char *const fname) {
     } sys_functions[] = {
         { "sys_exit", sys_exit },
         { "sys_yield", sys_yield },
+        { "sys_sched_setparam", sys_sched_setparam },
+        { "sys_sleep", sys_sleep },
+        { "sys_mutex_init", sys_mutex_init },
+        { "sys_mutex_lock", sys_mutex_lock },
+        { "sys_mutex_unlock", sys_mutex_unlock },
+        { "sys_mutex_trylock", sys_mutex_trylock },
+        { "sys_condvar_init", sys_condvar_init },
+        { "sys_condvar_wait", sys_condvar_wait },
+        { "sys_condvar_signal", sys_condvar_signal },
+        { "sys_condvar_broadcast", sys_condvar_broadcast },
     };
     
     for (unsigned i = 0; i < sizeof(sys_functions) / sizeof(sys_functions[0]); i++) {

@@ -56,6 +56,15 @@ struct Env {
     uint32_t env_runs;       /* Number of times environment has run */
 
     uint8_t *binary; /* Pointer to process ELF image in kernel memory */
+
+    /* EEVDF scheduling parameters */
+    uint64_t env_weight;          /* Process weight (proportional share) */
+    uint64_t env_vruntime;        /* Virtual runtime */
+    uint64_t env_vdeadline;       /* Virtual deadline */
+    uint64_t env_slice_start;     /* Start of current time slice (TSC) */
+    uint64_t env_sleep_until;     /* TSC value when process should wake up (0 = not sleeping) */
+    struct Env *env_sched_link;   /* Link for scheduler queue */
+    struct Env *env_wait_link;    /* Link for wait queues (mutex/condvar) */
 };
 
 #endif /* !JOS_INC_ENV_H */
