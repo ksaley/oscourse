@@ -87,7 +87,67 @@ acpi_find_table(const char *sign) {
      * HINT: You may want to distunguish RSDT/XSDT
      */
     // LAB 5: Your code here:
+    static RSDT *rsdt;
+    static size_t rsdt_len;
+    static size_t rsdt_entsz;
+    
+    if (!rsdt) {
+        if (!uefi_lp->ACPIRoot) {
+            panic("No RSDP\n");
+        }
+        
+        RSDP *rsdp = mmio_map_region(uefi_lp->ACPIRoot, sizeof(RSDP));
+        uint8_t rsdp_revision = rsdp->Revision;
+        uint8_t err = 0;
+        
+        size_t rsdp_len = rsdp_revision ? rsdp->Length : offsetof(RSDP, Length);
+        for (size_t i = 0; i < rsdp_len; i++) {
+            err += ((uint8_t *)rsdp)[i];
+        }
+        if (err) {
+            panic("Invalid RSDP checksum\n");
+        }
+        
+        uint64_t rsdt_pa = rsdp_revision ? rsdp->XsdtAddress : rsdp->RsdtAddress;
+        rsdt_entsz = rsdp_revision ? 8 : 4;
+        
+        rsdt = mmio_map_region(rsdt_pa, sizeof(RSDT));
+        rsdt = mmio_remap_last_region(rsdt_pa, rsdt, sizeof(RSDT), rsdt->h.Length);
+        
+        err = 0;
+        for (size_t i = 0; i < rsdt->h.Length; i++) {
+            err += ((uint8_t *)rsdt)[i];
+        }
+        if (err) {
+            panic("Invalid RSDT/XSDT checksum\n");
+        }
+        
+        const char *expected_sig = rsdp_revision ? "XSDT" : "RSDT";
+        if (strncmp(rsdt->h.Signature, expected_sig, 4)) {
+            panic("Invalid RSDT/XSDT signature\n");
+        }
+        rsdt_len = (rsdt->h.Length - sizeof(RSDT)) / rsdt_entsz;
+    }
+    
+    for (size_t i = 0; i < rsdt_len; i++) {
+        uint64_t table_pa;
+        memcpy(&table_pa, (uint8_t *)rsdt->PointerToOtherSDT + i * rsdt_entsz, rsdt_entsz);
+        
+        ACPISDTHeader *head = mmio_map_region(table_pa, sizeof(ACPISDTHeader));
+        head = mmio_remap_last_region(table_pa, head, sizeof(ACPISDTHeader), head->Length);
+        
+        uint8_t err = 0;
+        for (size_t j = 0; j < head->Length; j++) {
+            err += ((uint8_t *)head)[j];
+        }
+        if (err) {
+            panic("Invalid ACPI table '%.4s' checksum", head->Signature);
+        }
 
+        if (!strncmp(head->Signature, sign, 4)) {
+            return head;
+        }
+    }
     return NULL;
 }
 
@@ -98,8 +158,9 @@ get_fadt(void) {
     // (use acpi_find_table)
     // HINT: ACPI table signatures are
     //       not always as their names
-
-    return NULL;
+    static FADT *fadt;
+    fadt = acpi_find_table("FACP");
+    return fadt;
 }
 
 /* Obtain and map RSDP ACPI table address. */
@@ -107,8 +168,9 @@ HPET *
 get_hpet(void) {
     // LAB 5: Your code here
     // (use acpi_find_table)
-
-    return NULL;
+    static HPET *hpet;
+    hpet = acpi_find_table("HPET");
+    return hpet;
 }
 
 /* Getting physical HPET timer address from its table. */
@@ -209,11 +271,21 @@ hpet_get_main_cnt(void) {
 void
 hpet_enable_interrupts_tim0(void) {
     // LAB 5: Your code here
+    hpetReg->GEN_CONF |= HPET_LEG_RT_CNF;
+    hpetReg->TIM0_CONF = (IRQ_TIMER << 9); 
+    hpetReg->TIM0_CONF |= HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
+    hpetReg->TIM0_COMP = hpet_get_main_cnt() + Peta / hpetFemto / 2;
+    pic_irq_unmask(IRQ_TIMER);
 }
 
 void
 hpet_enable_interrupts_tim1(void) {
     // LAB 5: Your code here
+    hpetReg->GEN_CONF |= HPET_LEG_RT_CNF;
+    hpetReg->TIM1_CONF = (IRQ_CLOCK << 9);
+    hpetReg->TIM1_CONF |= HPET_TN_TYPE_CNF | HPET_TN_INT_ENB_CNF | HPET_TN_VAL_SET_CNF;
+    hpetReg->TIM1_COMP = hpet_get_main_cnt() + Peta / hpetFemto / 2 * 3;
+    pic_irq_unmask(IRQ_CLOCK);
 }
 
 void
@@ -234,7 +306,15 @@ hpet_cpu_frequency(void) {
     static uint64_t cpu_freq;
 
     // LAB 5: Your code here
-
+    uint64_t first = hpet_get_main_cnt();
+    uint64_t first_tsc = read_tsc();
+    uint64_t next = first;
+    uint64_t eps = hpetFreq / 10;
+    while (next - first < eps) {
+        next = hpet_get_main_cnt();
+    }
+    uint64_t next_tsc = read_tsc();
+    cpu_freq = (next_tsc - first_tsc) * 10;
     return cpu_freq;
 }
 
@@ -252,6 +332,20 @@ pmtimer_cpu_frequency(void) {
     static uint64_t cpu_freq;
 
     // LAB 5: Your code here
-
+    uint32_t first = pmtimer_get_timeval();
+    uint64_t first_tsc = read_tsc();
+    uint32_t next = first;
+    uint64_t d = 0;
+    uint64_t eps = PM_FREQ / 10;
+    while (d < eps) {
+        next = pmtimer_get_timeval();
+        if (next >= first) {
+            d = next - first;
+        } else {
+            d = (0x1000000 - first) + next;
+        }
+    }
+    uint64_t next_tsc = read_tsc();
+    cpu_freq = (next_tsc - first_tsc) * 10;
     return cpu_freq;
 }
